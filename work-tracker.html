@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Work Time Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0d10;
+    --surface: #14161b;
+    --card: #1a1d24;
+    --border: #252830;
+    --accent: #c8f060;
+    --accent2: #5dd8f5;
+    --text: #e6e8f0;
+    --muted: #636878;
+    --danger: #f06070;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 24px 16px 80px;
+  }
+  header { text-align: center; margin-bottom: 32px; }
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.6rem, 6vw, 2.4rem);
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+  header p { color: var(--muted); font-size: 0.72rem; margin-top: 4px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .container { max-width: 520px; margin: 0 auto; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+    animation: fadeIn 0.3s ease both;
+  }
+
+  .card-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+
+  .live-time {
+    font-size: clamp(2.4rem, 10vw, 3.8rem);
+    color: var(--accent);
+    font-weight: 300;
+    text-align: center;
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+  .live-date {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 6px 0 22px;
+  }
+
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn {
+    padding: 15px 10px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
+  }
+  .btn-in { background: var(--accent); color: #0c0d10; }
+  .btn-in:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+  .btn-out { background: transparent; color: var(--accent2); border: 1.5px solid var(--accent2); }
+  .btn-out:hover:not(:disabled) { background: var(--accent2); color: #0c0d10; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
+
+  .status {
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 14px;
+    min-height: 18px;
+  }
+  .status em { color: var(--accent2); font-style: normal; }
+
+  .week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .week-nav-label { font-size: 0.8rem; color: var(--text); }
+  .nav-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .week-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(200,240,96,0.07);
+    border: 1px solid rgba(200,240,96,0.2);
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .week-total-label { font-size: 0.72rem; color: var(--muted); }
+  .week-total-val { font-size: 1.2rem; color: var(--accent); }
+
+  .day-row { border-top: 1px solid var(--border); }
+  .day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 4px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .day-left { display: flex; align-items: center; gap: 10px; }
+  .day-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .day-dot.has-data { background: var(--accent2); }
+  .day-dot.today { background: var(--accent); }
+  .day-name { font-size: 0.82rem; }
+  .day-name.today { color: var(--accent); }
+  .day-right { display: flex; align-items: center; gap: 12px; }
+  .day-hrs { font-size: 0.78rem; color: var(--accent2); }
+  .chevron { color: var(--muted); font-size: 0.65rem; transition: transform 0.2s; display: inline-block; }
+  .chevron.open { transform: rotate(180deg); }
+
+  .day-entries { display: none; padding: 0 4px 10px; }
+  .day-entries.open { display: block; }
+
+  .entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 12px;
+    background: var(--surface);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 0.72rem;
+    gap: 8px;
+  }
+  .entry-time { color: var(--muted); flex-shrink: 0; }
+  .entry-dur { color: var(--text); flex-shrink: 0; }
+  .del-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+    flex-shrink: 0;
+  }
+  .del-btn:hover { color: var(--danger); }
+  .no-entries { color: var(--muted); font-size: 0.72rem; padding: 6px 0; }
+
+  .avg-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .avg-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .avg-tile-label { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .avg-tile-val { font-size: 1.1rem; color: var(--accent); }
+  .avg-tile-val.empty { color: var(--muted); }
+  .avg-tile-sub { font-size: 0.6rem; color: var(--muted); margin-top: 4px; }
+  .avg-note { font-size: 0.65rem; color: var(--muted); margin-top: 12px; text-align: center; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⏱ Time Tracker</h1>
+    <p>clock in · clock out · stay on track</p>
+  </header>
+
+  <div class="card">
+    <div class="card-label">Today</div>
+    <div class="live-time" id="liveClock">--:--:--</div>
+    <div class="live-date" id="liveDate">---</div>
+    <div class="btn-row">
+      <button class="btn btn-in" id="btnIn" onclick="clockIn()">Clock In</button>
+      <button class="btn btn-out" id="btnOut" onclick="clockOut()" disabled>Clock Out</button>
+    </div>
+    <div class="status" id="status">Ready to clock in</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Average Hours in Office</div>
+    <div class="avg-grid">
+      <div class="avg-tile">
+        <div class="avg-tile-label">This Week</div>
+        <div class="avg-tile-val" id="avg1">—</div>
+      </div>
+      <div class="avg-tile">
+        <div class="avg-tile-label">4-Week Avg</div>
+        <div class="avg-tile-val" id="avg4">—</div>
+      </div>
+      <div class="avg-tile">
+        <div class="avg-tile-label">8-Week Avg</div>
+        <div class="avg-tile-val" id="avg8">—</div>
+      </div>
+    </div>
+    <div class="avg-note">Only counts weeks with at least one entry</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Weekly Log</div>
+    <div class="week-nav">
+      <button class="nav-btn" onclick="changeWeek(-1)">← Prev</button>
+      <span class="week-nav-label" id="weekLabel">---</span>
+      <button class="nav-btn" id="btnNextWeek" onclick="changeWeek(1)" disabled>Next →</button>
+    </div>
+    <div class="week-total">
+      <span class="week-total-label">Week Total</span>
+      <span class="week-total-val" id="weekTotal">0h 00m</span>
+    </div>
+    <div id="dayList"></div>
+  </div>
+</div>
+
+<script>
+  const STORE_KEY = 'wtt_entries_v1';
+  const ACTIVE_KEY = 'wtt_active_v1';
+
+  function load() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { return []; } }
+  function save(d) { localStorage.setItem(STORE_KEY, JSON.stringify(d)); }
+  function loadActive() { try { return JSON.parse(localStorage.getItem(ACTIVE_KEY)); } catch { return null; } }
+  function saveActive(v) { v ? localStorage.setItem(ACTIVE_KEY, JSON.stringify(v)) : localStorage.removeItem(ACTIVE_KEY); }
+
+  let entries = load();
+  let active = loadActive();
+  let weekOffset = 0;
+
+  function pad(n) { return String(n).padStart(2,'0'); }
+  function fmt(ts) {
+    const d = new Date(ts);
+    let h = d.getHours(), m = d.getMinutes();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${pad(h)}:${pad(m)} ${ap}`;
+  }
+  function fmtDur(ms) {
+    const t = Math.floor(ms / 60000);
+    return `${Math.floor(t/60)}h ${pad(t%60)}m`;
+  }
+  function dateKey(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function todayKey() { return dateKey(Date.now()); }
+
+  function tickClock() {
+    const n = new Date();
+    const h = n.getHours(), m = n.getMinutes(), s = n.getSeconds();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    document.getElementById('liveClock').textContent = `${pad(h%12||12)}:${pad(m)}:${pad(s)} ${ap}`;
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('liveDate').textContent = `${days[n.getDay()]}, ${mons[n.getMonth()]} ${n.getDate()}, ${n.getFullYear()}`;
+  }
+  setInterval(tickClock, 1000); tickClock();
+
+  function clockIn() {
+    if (active) return;
+    active = { id: Date.now(), date: todayKey(), clockIn: Date.now() };
+    saveActive(active);
+    updateButtons(); renderWeek(); renderAverages();
+  }
+  function clockOut() {
+    if (!active) return;
+    entries.push({ ...active, clockOut: Date.now() });
+    save(entries);
+    active = null; saveActive(null);
+    updateButtons(); renderWeek(); renderAverages();
+  }
+  function updateButtons() {
+    const btnIn = document.getElementById('btnIn');
+    const btnOut = document.getElementById('btnOut');
+    const status = document.getElementById('status');
+    if (active) {
+      btnIn.disabled = true; btnOut.disabled = false;
+      status.innerHTML = `Clocked in at <em>${fmt(active.clockIn)}</em>`;
+    } else {
+      btnIn.disabled = false; btnOut.disabled = true;
+      const todayE = entries.filter(e => e.date === todayKey());
+      if (todayE.length) {
+        const total = todayE.reduce((s,e) => s + (e.clockOut - e.clockIn), 0);
+        status.innerHTML = `Today: <em>${fmtDur(total)}</em> logged`;
+      } else {
+        status.textContent = 'Ready to clock in';
+      }
+    }
+  }
+
+  function getWeekStart(offset) {
+    const now = new Date();
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - (now.getDay() || 7) + 1 + offset * 7);
+    mon.setHours(0,0,0,0);
+    return mon;
+  }
+  function changeWeek(dir) {
+    weekOffset += dir;
+    document.getElementById('btnNextWeek').disabled = weekOffset >= 0;
+    renderWeek();
+  }
+
+  function renderWeek() {
+    const ws = getWeekStart(weekOffset);
+    const we = new Date(ws); we.setDate(ws.getDate()+6);
+    const mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('weekLabel').textContent = `${mons[ws.getMonth()]} ${ws.getDate()} – ${mons[we.getMonth()]} ${we.getDate()}`;
+    document.getElementById('btnNextWeek').disabled = weekOffset >= 0;
+
+    const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const today = todayKey();
+    let weekMs = 0;
+    const display = [...entries];
+    if (active) display.push({ ...active, clockOut: Date.now(), _partial: true });
+
+    let html = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(ws); d.setDate(ws.getDate()+i);
+      const key = dateKey(d.getTime());
+      const de = display.filter(e => e.date === key);
+      const dayMs = de.reduce((s,e) => s+(e.clockOut-e.clockIn),0);
+      weekMs += dayMs;
+      const isToday = key === today;
+      html += `<div class="day-row">
+        <div class="day-header" onclick="toggleDay('${key}')">
+          <div class="day-left">
+            <div class="day-dot ${isToday?'today':de.length?'has-data':''}"></div>
+            <span class="day-name ${isToday?'today':''}">${dayNames[i]} ${d.getDate()}</span>
+          </div>
+          <div class="day-right">
+            ${dayMs?`<span class="day-hrs">${fmtDur(dayMs)}</span>`:''}
+            <span class="chevron" id="chev-${key}">▼</span>
+          </div>
+        </div>
+        <div class="day-entries" id="ent-${key}">`;
+      if (!de.length) {
+        html += `<div class="no-entries">No entries</div>`;
+      } else {
+        de.forEach(e => {
+          const dur = fmtDur(e.clockOut-e.clockIn);
+          html += `<div class="entry">
+            <span class="entry-time">${fmt(e.clockIn)} → ${e._partial?'now':fmt(e.clockOut)}</span>
+            <span class="entry-dur">${dur}${e._partial?' <span style="color:var(--accent);font-size:0.65rem">●LIVE</span>':''}</span>
+            ${!e._partial?`<button class="del-btn" onclick="deleteEntry(${e.id},event)">✕</button>`:''}
+          </div>`;
+        });
+      }
+      html += `</div></div>`;
+    }
+    document.getElementById('dayList').innerHTML = html;
+    document.getElementById('weekTotal').textContent = fmtDur(weekMs);
+    updateButtons();
+  }
+
+  function toggleDay(key) {
+    document.getElementById(`ent-${key}`).classList.toggle('open');
+    document.getElementById(`chev-${key}`).classList.toggle('open');
+  }
+  function deleteEntry(id, e) {
+    e.stopPropagation();
+    if (!confirm('Delete this entry?')) return;
+    entries = entries.filter(x => x.id !== id);
+    save(entries); renderWeek(); renderAverages();
+  }
+
+  function getWeekMs(offset) {
+    const ws = getWeekStart(offset);
+    let total = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(ws); d.setDate(ws.getDate() + i);
+      const key = dateKey(d.getTime());
+      entries.filter(e => e.date === key).forEach(e => { total += e.clockOut - e.clockIn; });
+    }
+    return total;
+  }
+  function calcAvg(numWeeks) {
+    let totalMs = 0, weeksWithData = 0;
+    for (let i = 0; i < numWeeks; i++) {
+      const wms = getWeekMs(-i);
+      if (wms > 0) { totalMs += wms; weeksWithData++; }
+    }
+    return weeksWithData === 0 ? null : totalMs / weeksWithData;
+  }
+  function renderAverages() {
+    const avgs = [calcAvg(1), calcAvg(4), calcAvg(8)];
+    ['avg1','avg4','avg8'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (avgs[i]) {
+        el.textContent = fmtDur(avgs[i]);
+        el.classList.remove('empty');
+      } else {
+        el.textContent = '—';
+        el.classList.add('empty');
+      }
+    });
+  }
+
+  updateButtons(); renderWeek(); renderAverages();
+</script>
+</body>
+</html>
